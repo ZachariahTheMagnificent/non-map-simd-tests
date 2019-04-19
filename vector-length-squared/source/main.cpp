@@ -2,6 +2,7 @@
 #include <vector>
 #include <random>
 #include <chrono>
+#include <immintrin.h>
 
 constexpr auto cache_line_num_bytes = 64;
 
@@ -92,6 +93,25 @@ int main(const int num_arguments, char** arguments)
 	const auto start_time = std::chrono::steady_clock::now();
 
 #if defined SIMD
+	using Vector = __m256;
+	constexpr auto vector_size = sizeof(Vector)/sizeof(float);
+	for(auto iteration_index = std::size_t{}; iteration_index < num_iterations; ++iteration_index)
+	{
+		for(auto element_index = std::size_t{}; element_index < output.size(); element_index += vector_size)
+		{
+			auto length_squared = _mm256_setzero_ps();
+			for(auto component_index = std::size_t{}; component_index < num_vector_components; ++component_index)
+			{
+				Vector component;
+				for(auto vector_index = std::size_t{}; vector_index < vector_size; ++vector_index)
+				{
+					reinterpret_cast<float(&)[vector_size]>(component)[vector_index] = input[(element_index + vector_index) * 3 + component_index];
+				}
+				length_squared = _mm256_fmadd_ps(component, component, length_squared);
+			}
+			_mm256_stream_ps(output.data() + element_index, length_squared);
+		}
+	}
 #else
 	for(auto iteration_index = std::size_t{}; iteration_index < num_iterations; ++iteration_index)
 	{
