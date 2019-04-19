@@ -73,7 +73,7 @@ int main(const int num_arguments, char** arguments)
 {
 	constexpr auto seed = std::size_t{860374};
 	constexpr auto num_elements = std::size_t{1'000'000};
-	constexpr auto num_iterations = std::size_t{100};
+	constexpr auto num_iterations = std::size_t{1000};
 	constexpr auto min_value = -1000.0f;
 	constexpr auto max_value = 1000.0f;
 	constexpr auto num_vector_components = 3;
