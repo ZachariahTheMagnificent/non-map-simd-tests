@@ -34,7 +34,7 @@ template<typename Type>
 class Allocator
 {
 public:
-	static_assert(alignof(Type) < GenericAllocator::maximum_alignment, "The allocator type has too high of an alignment requirement!");
+	static_assert(alignof(Type) <= GenericAllocator::maximum_alignment, "The allocator type has too high of an alignment requirement!");
 
 	using value_type = Type;
 
