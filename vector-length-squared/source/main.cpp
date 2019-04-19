@@ -15,7 +15,7 @@ public:
 
 	static char* allocate(const std::size_t size)
 	{
-		const auto num_blocks = size / sizeof(Block) * sizeof(Block);
+		const auto num_blocks = (size + sizeof(Block) - 1) / sizeof(Block);
 		return reinterpret_cast<char*>(new Block[num_blocks]);
 	}
 	static void deallocate(char*const allocation, const std::size_t size) noexcept
@@ -58,11 +58,11 @@ public:
 
 	Type* allocate(const std::size_t size)
 	{
-		return reinterpret_cast<Type*>(GenericAllocator::allocate(size));
+		return reinterpret_cast<Type*>(GenericAllocator::allocate(size*sizeof(Type)));
 	}
 	void deallocate(Type*const allocation, const std::size_t size) noexcept
 	{
-		GenericAllocator::deallocate(reinterpret_cast<char*>(allocation), size);
+		GenericAllocator::deallocate(reinterpret_cast<char*>(allocation), size*sizeof(Type));
 	}
 };
 
