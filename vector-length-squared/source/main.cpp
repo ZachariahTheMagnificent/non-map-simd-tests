@@ -76,9 +76,9 @@ int main(const int num_arguments, char** arguments)
 	constexpr auto num_iterations = std::size_t{1000};
 	constexpr auto min_value = -1000.0f;
 	constexpr auto max_value = 1000.0f;
-	constexpr auto num_vector_components = 3;
+	constexpr auto num_components = 3;
 	
-	auto input = DynamicArray<float>(num_elements*num_vector_components);
+	auto input = DynamicArray<float>(num_elements*num_components);
 	auto rng_engine = std::mt19937_64{seed};
 	const auto random_float = std::uniform_real_distribution{min_value, max_value};
 	for(auto& element : input)
@@ -88,7 +88,7 @@ int main(const int num_arguments, char** arguments)
 
 	std::cout << "vector-length-squared test!\n";
 
-	auto output = DynamicArray<float>(input.size()/num_vector_components);
+	auto output = DynamicArray<float>(num_elements);
 
 	const auto start_time = std::chrono::steady_clock::now();
 
@@ -99,15 +99,19 @@ int main(const int num_arguments, char** arguments)
 	{
 		for(auto element_index = std::size_t{}; element_index < output.size(); element_index += vector_size)
 		{
-			auto length_squared = _mm256_setzero_ps();
-			for(auto component_index = std::size_t{}; component_index < num_vector_components; ++component_index)
+			Vector components[num_components];
+			for(auto vector_element_index = std::size_t{}; vector_element_index < vector_size; ++vector_element_index)
 			{
-				Vector component;
-				for(auto vector_index = std::size_t{}; vector_index < vector_size; ++vector_index)
+				const auto displacement = (element_index + vector_element_index) * 3;
+				for(auto component_index = std::size_t{}; component_index < num_components; ++component_index)
 				{
-					reinterpret_cast<float(&)[vector_size]>(component)[vector_index] = input[(element_index + vector_index) * 3 + component_index];
+					reinterpret_cast<float(&)[vector_size]>(components[component_index])[vector_element_index] = input[displacement + component_index];
 				}
-				length_squared = _mm256_fmadd_ps(component, component, length_squared);
+			}
+			auto length_squared = _mm256_mul_ps(components[0], components[0]);
+			for(auto component_index = std::size_t{1}; component_index < num_components; ++component_index)
+			{
+				length_squared = _mm256_fmadd_ps(components[component_index], components[component_index], length_squared);
 			}
 			_mm256_stream_ps(output.data() + element_index, length_squared);
 		}
@@ -118,9 +122,9 @@ int main(const int num_arguments, char** arguments)
 		for(auto element_index = std::size_t{}; element_index < output.size(); ++element_index)
 		{
 			auto length_squared = float{};
-			for(auto component_index = std::size_t{}; component_index < num_vector_components; ++component_index)
+			for(auto component_index = std::size_t{}; component_index < num_components; ++component_index)
 			{
-				const auto component = input[element_index*num_vector_components + component_index];
+				const auto component = input[element_index*num_components + component_index];
 				length_squared += component * component;
 			}
 			output[element_index] = length_squared;
