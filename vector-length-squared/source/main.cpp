@@ -92,8 +92,19 @@ int main(const int num_arguments, char** arguments)
 
 	const auto start_time = std::chrono::steady_clock::now();
 
-#if defined SIMD
+#if defined AVX
 	using Vector = __m256;
+#define mul_vec _mm256_mul_ps
+#define mul_add_vec _mm256_fmadd_ps
+#define store_vec _mm256_stream_ps
+#elif defined SIMD
+	using Vector = __m128;
+#define mul_vec _mm_mul_ps
+#define mul_add_vec _mm_fmadd_ps
+#define store_vec _mm_stream_ps
+#endif
+
+#if defined AVX || defined SIMD
 	constexpr auto vector_size = sizeof(Vector)/sizeof(float);
 	for(auto iteration_index = std::size_t{}; iteration_index < num_iterations; ++iteration_index)
 	{
@@ -108,12 +119,12 @@ int main(const int num_arguments, char** arguments)
 					reinterpret_cast<float(&)[vector_size]>(components[component_index])[vector_element_index] = input[displacement + component_index];
 				}
 			}
-			auto length_squared = _mm256_mul_ps(components[0], components[0]);
+			auto length_squared = mul_vec(components[0], components[0]);
 			for(auto component_index = std::size_t{1}; component_index < num_components; ++component_index)
 			{
-				length_squared = _mm256_fmadd_ps(components[component_index], components[component_index], length_squared);
+				length_squared = mul_add_vec(components[component_index], components[component_index], length_squared);
 			}
-			_mm256_stream_ps(output.data() + element_index, length_squared);
+			store_vec(output.data() + element_index, length_squared);
 		}
 	}
 #else
@@ -137,7 +148,17 @@ int main(const int num_arguments, char** arguments)
 	const auto duration = end_time - start_time;
 	const auto duration_in_seconds = std::chrono::duration<double>{duration}.count();
 
-	std::cout << "Done!\n";
+	std::cout << "Done with: ";
+	if constexpr(sizeof(void*) == 8)
+	{
+		std::cout << "[x64]";
+	}
+#if defined AVX
+	std::cout << "[AVX]";
+#elif defined SIMD
+	std::cout << "[SIMD]";
+#endif
+	std::cout << '\n';
 	std::cout << "First element: " << output.front() << '\n';
 	std::cout << "Last element: " << output.back() << '\n';
 	std::cout << "Time taken: " << duration_in_seconds << "s\n";
